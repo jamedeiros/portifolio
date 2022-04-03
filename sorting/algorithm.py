@@ -1,14 +1,24 @@
 import abc
+import asyncio
 import random
+import time
 
 from utils import swap
 
 
 class Algorithm(abc.ABC):
 
-    def __init__(self, size, step=10):
+    def __init__(self, size, display, step=10, sleep_time=1000):
         self.size = size
+        self.display = display
         self.step = step
+        self.sleep_time = sleep_time
+
+    async def update(self):
+        print("Updating")
+        self.display.update()
+        time.sleep(1)
+        print("Updated")
     
     @abc.abstractmethod
     def process(self, data):
@@ -124,8 +134,7 @@ class BogoSort(Algorithm):
                 return False
         return True
 
-    def process(self, data):
-        if self.sorted(data):
-            return None
-        
-        random.shuffle(data)
+    async def process(self, data):
+        while not self.sorted(data):
+            random.shuffle(data)
+            await self.update()

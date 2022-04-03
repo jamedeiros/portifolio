@@ -19,30 +19,26 @@ class MyDisplay(Widget):
     
     def __init__(self, data, algorithm, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        data_len=len(data)
         self.data = data
-        self.bar_size = WINDOWS_WIDTH // len(self.data)
-        self.algorithm = algorithm
+        self.bar_size = WINDOWS_WIDTH // data_len
+        self.algorithm = algorithm(size=data_len, step=STEPS, display=self)
+        self.highlight = list()
 
-        self.trigger = Clock.create_trigger(
-            self.update_data, timeout=TIMEOUT
-        )
-        self.trigger()
+        self.algorithm.process(data=self.data)
 
-    def update_data(self, *args):
-        highlight = self.algorithm.process(self.data)
-        if highlight is None:
-            highlight = []
-        self.update(highlight)
-        self.trigger()
-    
-    def update(self, highlight):
+    def update(self, *args):
         self.canvas.clear()
         with self.canvas:
             for idx, value in enumerate(self.data):
                 Color(1, 1, 1)
-                if idx in highlight:
+                if idx in self.highlight:
                     Color(1, 0, 0)
                 Rectangle(pos=(idx * self.bar_size, 0), size=(self.bar_size, value))
+    
+    # def run(self, *args, **kwargs):
+    #     super().run(*args, **kwargs)
+    #     self.update()
 
 
 class Application(App):
@@ -56,7 +52,7 @@ class Application(App):
     def build(self):
         myDisplay = MyDisplay(
             data=self.data, 
-            algorithm=self.algorithm(size=len(self.data), step=self.step)
+            algorithm=self.algorithm
         )
         return myDisplay
 
