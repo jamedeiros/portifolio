@@ -1,116 +1,101 @@
 import abc
 import random
+import time
 
 from utils import swap
 
 
 class Algorithm(abc.ABC):
 
-    def __init__(self, size, step=10):
-        self.size = size
-        self.step = step
+    def __init__(self, data, display):
+        self.data = data
+        self.data_size = len(self.data)
+        self.display = display
+        self.running = True
+    
+    def stop(self):
+        self.running = False
     
     @abc.abstractmethod
-    def process(self, data):
+    def process(self, is_running):
         pass
 
 class InsertionSort(Algorithm):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.i = 0
-        self.j = 0
-    
-    def process(self, data):
-        for _ in range(self.step):
-            if self.j == 0:
-                self.i +=1
-                self.j = self.i
+    def process(self, is_running):
+        for i in range(1, self.data_size):
+            j = i
+            while j > 0 and self.data[j] < self.data[j-1]:
+                if not is_running():
+                    return None
 
-            if self.i == self.size:
-                return None
+                swap(self.data, j, j-1)
+                j -= 1
+                self.display.add_highlight(j)
+                self.display.draw()
 
-            highlight = self.j - 1
-
-            if data[self.j] < data[self.j-1]:
-                swap(data, self.j, self.j-1)
-                self.j -= 1
-            else:
-                self.j = 0
-
-        return highlight,
 
 
 class SelectionSort(Algorithm):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.i = 0
-        self.j = 0
-        self.minor = 0
-    
-    def process(self, data):
-        for _ in range(self.step):
-            if self.j == self.size:
-                if self.i != self.minor:
-                    swap(data, self.i, self.minor)
-                self.i += 1
-                self.j = self.i
-                self.minor = self.i
+    def process(self, is_running):
+        for i in range(self.data_size):
+            minor = i
+            for j in range(i, self.data_size):
+                if not is_running():
+                    return None
 
-            if self.i >= self.size:
-                return None
+                if self.data[minor] > self.data[j]:
+                    minor = j
+                self.display.add_highlight([i, j, minor])
+                self.display.draw()
 
-            if data[self.j] < data[self.minor]:
-                self.minor = self.j
-            
-            self.j += 1
-        return self.i, self.j, self.minor
+            if minor != i:
+                swap(self.data, i, minor)
 
 
 class BubbleSort(Algorithm):
     
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.i = 0
-        self.swapped = False
-    
-    def process(self, data):
-        for _ in range(self.step):
-            if self.i == self.size - 1:
-                if not self.swapped:
+    def process(self, is_running):
+        swapped = True
+        while swapped:
+            swapped = False
+            for i in range(self.data_size - 1):
+                if not is_running():
                     return None
-                self.i = 0
-                self.swapped = False
-
-            if data[self.i] > data[self.i + 1]:
-                swap(data, self.i, self.i + 1)
-                self.swapped = True
-            self.i += 1
-        return self.i, self.i + 1
+                if self.data[i] > self.data[i+1]:
+                    swap(self.data, i, i+1)
+                    swapped = True
+                self.display.add_highlight([i, i+1])
+                self.display.draw()
 
 
 class CombSort(Algorithm):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, factor=1.3, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.i = 0
-        self.gap = int(self.size // 1.3)
+        self.factor = factor
 
-    def process(self, data):
-        for _ in range(self.step):
-            if self.i == self.size - 1:
-                return None
-                
-            if (self.i + self.gap) < self.size:
-                if data[self.i] > data[self.i + self.gap]:
-                    swap(data, self.i, self.i + self.gap)
-                self.i += 1
-            else:
-                self.i = 0
-                self.gap = int(self.gap // 1.3)
-        
-        return self.i, self.i + self.gap
+    def process(self, is_running):
+        gap = self.data_size
+        sorted = False
+
+        while not sorted:
+            gap = int(gap // self.factor)
+            if gap <= 1:
+                gap = 1
+                sorted = True
+            
+            for i in range(self.data_size - gap):
+                if not is_running():
+                    return None
+
+                if self.data[i] > self.data[i + gap]:
+                    swap(self.data, i, i + gap)
+                    sorted = False
+                self.display.add_highlight([i, i+gap])
+                self.display.draw()
+
 
 
 class BogoSort(Algorithm):
@@ -118,14 +103,17 @@ class BogoSort(Algorithm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def sorted(self, data):
-        for i in range(self.size-1):
-            if data[i] > data[i+1]:
+    def sorted(self):
+        for i in range(self.data_size-1):
+            if self.data[i] > self.data[i+1]:
                 return False
         return True
 
-    def process(self, data):
-        if self.sorted(data):
-            return None
+    def process(self, is_running):
+        while not self.sorted():
+            if not is_running():
+                return None
+            random.shuffle(self.data)
+            self.display.draw()
+        return None
         
-        random.shuffle(data)
